@@ -1,7 +1,4 @@
 -- CreateEnum
-CREATE TYPE "AppRole" AS ENUM ('admin', 'staff', 'manager', 'director', 'supervisor');
-
--- CreateEnum
 CREATE TYPE "UserStatus" AS ENUM ('active', 'suspended', 'deleted');
 
 -- CreateEnum
@@ -11,7 +8,7 @@ CREATE TYPE "AssessmentStatus" AS ENUM ('draft', 'self_submitted', 'manager_revi
 CREATE TYPE "QuestionStatus" AS ENUM ('pending', 'answered', 'closed');
 
 -- CreateEnum
-CREATE TYPE "WorkflowStepType" AS ENUM ('review', 'approval', 'review_and_approval', 'acknowledge');
+CREATE TYPE "WorkflowStepType" AS ENUM ('review', 'approval', 'review_and_approval', 'acknowledge', 'admin_review');
 
 -- CreateEnum
 CREATE TYPE "NotificationStatus" AS ENUM ('pending', 'sent', 'failed');
@@ -19,9 +16,12 @@ CREATE TYPE "NotificationStatus" AS ENUM ('pending', 'sent', 'failed');
 -- CreateEnum
 CREATE TYPE "NotificationType" AS ENUM ('assessment_submitted', 'manager_review_completed', 'director_approved', 'admin_released', 'assessment_returned', 'assessment_acknowledged');
 
+-- CreateEnum
+CREATE TYPE "app_role" AS ENUM ('admin', 'staff', 'manager', 'director', 'supervisor');
+
 -- CreateTable
 CREATE TABLE "departments" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "name" TEXT NOT NULL,
     "parent_id" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -32,7 +32,7 @@ CREATE TABLE "departments" (
 
 -- CreateTable
 CREATE TABLE "users" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "email" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
     "email_verified" BOOLEAN NOT NULL DEFAULT false,
@@ -45,7 +45,7 @@ CREATE TABLE "users" (
 
 -- CreateTable
 CREATE TABLE "profiles" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "user_id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "full_name" TEXT,
@@ -60,9 +60,9 @@ CREATE TABLE "profiles" (
 
 -- CreateTable
 CREATE TABLE "user_roles" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "user_id" TEXT NOT NULL,
-    "role" "AppRole" NOT NULL DEFAULT 'staff',
+    "role" "app_role" NOT NULL DEFAULT 'staff',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "user_roles_pkey" PRIMARY KEY ("id")
@@ -70,7 +70,7 @@ CREATE TABLE "user_roles" (
 
 -- CreateTable
 CREATE TABLE "rubric_templates" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT (gen_random_uuid())::text,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "department_id" TEXT,
@@ -110,7 +110,7 @@ CREATE TABLE "rubric_indicators" (
 
 -- CreateTable
 CREATE TABLE "kpi_domains" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "template_id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "weight" DECIMAL(5,2) NOT NULL DEFAULT 0,
@@ -122,7 +122,7 @@ CREATE TABLE "kpi_domains" (
 
 -- CreateTable
 CREATE TABLE "kpi_standards" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "domain_id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "sort_order" INTEGER NOT NULL DEFAULT 0,
@@ -133,7 +133,7 @@ CREATE TABLE "kpi_standards" (
 
 -- CreateTable
 CREATE TABLE "kpis" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "standard_id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
@@ -151,7 +151,7 @@ CREATE TABLE "kpis" (
 
 -- CreateTable
 CREATE TABLE "assessments" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "staff_id" TEXT NOT NULL,
     "manager_id" TEXT,
     "director_id" TEXT,
@@ -198,9 +198,9 @@ CREATE TABLE "assessment_questions" (
 
 -- CreateTable
 CREATE TABLE "department_roles" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "department_id" TEXT,
-    "role" "AppRole" NOT NULL,
+    "role" "app_role" NOT NULL,
     "default_template_id" TEXT,
     "name" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -211,10 +211,10 @@ CREATE TABLE "department_roles" (
 
 -- CreateTable
 CREATE TABLE "approval_workflows" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "department_role_id" TEXT NOT NULL,
     "step_order" INTEGER NOT NULL,
-    "approver_role" "AppRole" NOT NULL,
+    "approver_role" "app_role" NOT NULL,
     "step_type" "WorkflowStepType" NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -334,19 +334,19 @@ CREATE INDEX "notification_preferences_user_id_idx" ON "notification_preferences
 ALTER TABLE "departments" ADD CONSTRAINT "departments_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "departments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "profiles" ADD CONSTRAINT "profiles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "profiles" ADD CONSTRAINT "profiles_department_id_fkey" FOREIGN KEY ("department_id") REFERENCES "departments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "profiles" ADD CONSTRAINT "profiles_department_id_fkey" FOREIGN KEY ("department_id") REFERENCES "departments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "profiles" ADD CONSTRAINT "profiles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "rubric_templates" ADD CONSTRAINT "rubric_templates_department_id_fkey" FOREIGN KEY ("department_id") REFERENCES "departments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "rubric_templates" ADD CONSTRAINT "rubric_templates_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "rubric_templates" ADD CONSTRAINT "rubric_templates_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "rubric_templates" ADD CONSTRAINT "rubric_templates_department_id_fkey" FOREIGN KEY ("department_id") REFERENCES "departments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "rubric_sections" ADD CONSTRAINT "rubric_sections_template_id_fkey" FOREIGN KEY ("template_id") REFERENCES "rubric_templates"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -364,19 +364,22 @@ ALTER TABLE "kpi_standards" ADD CONSTRAINT "kpi_standards_domain_id_fkey" FOREIG
 ALTER TABLE "kpis" ADD CONSTRAINT "kpis_standard_id_fkey" FOREIGN KEY ("standard_id") REFERENCES "kpi_standards"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "assessments" ADD CONSTRAINT "assessments_staff_id_fkey" FOREIGN KEY ("staff_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "assessments" ADD CONSTRAINT "assessments_director_id_fkey" FOREIGN KEY ("director_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "assessments" ADD CONSTRAINT "assessments_manager_id_fkey" FOREIGN KEY ("manager_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "assessments" ADD CONSTRAINT "assessments_director_id_fkey" FOREIGN KEY ("director_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "assessments" ADD CONSTRAINT "assessments_returned_by_fkey" FOREIGN KEY ("returned_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "assessments" ADD CONSTRAINT "assessments_staff_id_fkey" FOREIGN KEY ("staff_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "assessments" ADD CONSTRAINT "assessments_template_id_fkey" FOREIGN KEY ("template_id") REFERENCES "rubric_templates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "assessments" ADD CONSTRAINT "assessments_returned_by_fkey" FOREIGN KEY ("returned_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "assessment_questions" ADD CONSTRAINT "assessment_questions_asked_by_fkey" FOREIGN KEY ("asked_by") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "assessment_questions" ADD CONSTRAINT "assessment_questions_assessment_id_fkey" FOREIGN KEY ("assessment_id") REFERENCES "assessments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -385,16 +388,13 @@ ALTER TABLE "assessment_questions" ADD CONSTRAINT "assessment_questions_assessme
 ALTER TABLE "assessment_questions" ADD CONSTRAINT "assessment_questions_indicator_id_fkey" FOREIGN KEY ("indicator_id") REFERENCES "rubric_indicators"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "assessment_questions" ADD CONSTRAINT "assessment_questions_asked_by_fkey" FOREIGN KEY ("asked_by") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "assessment_questions" ADD CONSTRAINT "assessment_questions_responded_by_fkey" FOREIGN KEY ("responded_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "department_roles" ADD CONSTRAINT "department_roles_department_id_fkey" FOREIGN KEY ("department_id") REFERENCES "departments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "department_roles" ADD CONSTRAINT "department_roles_default_template_id_fkey" FOREIGN KEY ("default_template_id") REFERENCES "rubric_templates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "department_roles" ADD CONSTRAINT "department_roles_default_template_id_fkey" FOREIGN KEY ("default_template_id") REFERENCES "rubric_templates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "department_roles" ADD CONSTRAINT "department_roles_department_id_fkey" FOREIGN KEY ("department_id") REFERENCES "departments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "approval_workflows" ADD CONSTRAINT "approval_workflows_department_role_id_fkey" FOREIGN KEY ("department_role_id") REFERENCES "department_roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
