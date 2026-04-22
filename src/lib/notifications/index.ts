@@ -8,6 +8,7 @@ import {
   markNotificationFailed,
   deleteNotificationLog,
 } from "./logger";
+export * from './observation-notifications';
 import type { NotificationTriggerParams, NotificationType } from "./types";
 
 const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";

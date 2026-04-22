@@ -33,7 +33,10 @@ export async function GET(request: Request) {
                 `SELECT u.id, u.email, u.status, u.created_at,
                         p.full_name, p.niy, p.job_title, p.department_id,
                         d.name as department_name,
-                        ARRAY_AGG(ur.role::text) FILTER (WHERE ur.role IS NOT NULL) as roles
+                        COALESCE(
+                        JSON_AGG(ur.role::text) FILTER (WHERE ur.role IS NOT NULL),
+                        '[]'
+                        ) as roles
                  FROM users u
                  LEFT JOIN profiles p ON u.id = p.user_id
                  LEFT JOIN departments d ON p.department_id = d.id
@@ -50,7 +53,10 @@ export async function GET(request: Request) {
             `SELECT u.id, u.email, u.status, u.created_at,
                     p.full_name, p.niy, p.job_title, p.department_id,
                     d.name as department_name,
-                    ARRAY_AGG(ur.role::text) FILTER (WHERE ur.role IS NOT NULL) as roles
+                    COALESCE(
+                    JSON_AGG(ur.role::text) FILTER (WHERE ur.role IS NOT NULL),
+                    '[]'
+                    ) as roles
              FROM users u
              LEFT JOIN profiles p ON u.id = p.user_id
              LEFT JOIN departments d ON p.department_id = d.id
@@ -141,7 +147,10 @@ export async function POST(request: Request) {
             `SELECT u.id, u.email, u.status, u.created_at,
                     p.full_name, p.niy, p.job_title, p.department_id,
                     d.name as department_name,
-                    ARRAY_AGG(ur.role::text) FILTER (WHERE ur.role IS NOT NULL) as roles
+                    COALESCE(
+                    JSON_AGG(ur.role::text) FILTER (WHERE ur.role IS NOT NULL),
+                    '[]'
+                    ) as roles
              FROM users u
              LEFT JOIN profiles p ON u.id = p.user_id
              LEFT JOIN departments d ON p.department_id = d.id
@@ -237,7 +246,10 @@ export async function PUT(request: Request) {
             `SELECT u.id, u.email, u.status, u.created_at,
                     p.full_name, p.niy, p.job_title, p.department_id,
                     d.name as department_name,
-                    ARRAY_AGG(ur.role::text) FILTER (WHERE ur.role IS NOT NULL) as roles
+                    COALESCE(
+                    JSON_AGG(ur.role::text) FILTER (WHERE ur.role IS NOT NULL),
+                    '[]'
+                    ) as roles
              FROM users u
              LEFT JOIN profiles p ON u.id = p.user_id
              LEFT JOIN departments d ON p.department_id = d.id
